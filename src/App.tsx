@@ -1,6 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
+import Login from './Login';
+
+const ADMIN_PASSWORD = '*6J^o!kqIXsK^oK#';
 
 interface Message {
   text: string;
@@ -14,6 +17,8 @@ interface WebhookPayload {
 }
 
 const Chat: React.FC = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [loginError, setLoginError] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState<string>('');
   const [space, setSpace] = useState<string>('INFRAD'); // Valor por defecto
@@ -21,6 +26,28 @@ const Chat: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const webhookUrl = import.meta.env.VITE_WEBHOOK_URL;
+
+  useEffect(() => {
+    const auth = localStorage.getItem('isLoggedIn');
+    if (auth === 'true') {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  const handleLogin = (password: string) => {
+    if (password === ADMIN_PASSWORD) {
+      setIsLoggedIn(true);
+      setLoginError('');
+      localStorage.setItem('isLoggedIn', 'true');
+    } else {
+      setLoginError('Invalid password');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    localStorage.removeItem('isLoggedIn');
+  };
 
   const sendMessage = async () => {
     if (input.trim() === '') return;
@@ -49,8 +76,23 @@ const Chat: React.FC = () => {
     }
   };
 
+  if (!isLoggedIn) {
+    return <Login onLogin={handleLogin} error={loginError} />;
+  }
+
   return (
     <div className="flex flex-col h-screen w-full bg-[#f9f9f9] text-[#202124] font-sans overflow-hidden">
+      {/* Header with Logout */}
+      <div className="flex justify-between items-center px-6 py-4 bg-white border-b border-[#e3e3e3]">
+        <div className="font-bold text-[#1f1f1f]">Confluence Omni Chat</div>
+        <button 
+          onClick={handleLogout}
+          className="text-sm text-gray-500 hover:text-gray-700 font-medium rounded-full transition duration-300 bg-red-100 hover:bg-red-200 px-3 py-1"
+        >
+          Logout
+        </button>
+      </div>
+
       <div className="flex-1 overflow-y-auto px-4 w-full max-w-3xl mx-auto space-y-6 pb-44 pt-10">
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
